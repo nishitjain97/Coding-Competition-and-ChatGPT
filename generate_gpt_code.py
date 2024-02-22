@@ -2,6 +2,9 @@
 File used to generate and store GPT codes.
 
 Nishit Jain, November 2023
+
+Updates:
+    Nishit Jain, February 2024
 """
 
 import os
@@ -20,11 +23,16 @@ with open(api_key_location, 'r') as f:
         api_key=f.readlines()[0]
     )
 
-## Set output location
-output_location = "./test"
+## Root location
+root_dir = "."
+
+## Output Folder
+output_folder = "test"
+output_location = os.path.join(root_dir, output_folder)
 
 ## Prompt template location
-prompt_template_loc = "/Users/nishitjain/Documents/Nishit/Masters/AP/coding_competition_gpt/prompt_template.txt"
+prompt_template_file = "prompt_template.txt"
+prompt_template_loc = os.path.join(root_dir, prompt_template_file)
 
 ## Set flag to print updates
 stdout = True
@@ -55,8 +63,12 @@ for index in problems.index[:10]:
     test_cases_private = problem['private_tests']
     test_cases_generated = problem['generated_tests']
 
-    if len(test_cases_public['output']) == 0 or len(test_cases_private['output']) == 0:
-        print("NO TEST CASES")
+    if len(test_cases_public['output']) == 0:
+        print("Problem", index, " - NO PUBLIC TEST CASES")
+        continue
+    
+    if len(test_cases_private['output']) == 0:
+        print("Problem", index, " - NO PRIVATE TEST CASES")
         continue
 
     prob_directory = os.path.join(root, str(index))
