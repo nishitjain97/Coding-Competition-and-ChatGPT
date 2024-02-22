@@ -14,7 +14,9 @@ import subprocess
 from utils import *
 
 ## Set output location
-root = "/Users/nishitjain/Documents/Nishit/Masters/AP/coding_competition_gpt/test/20231114_160059"
+root = "./test"
+folder_name = "20240222_162558"
+root_dir = os.path.join(root, folder_name)
 
 ## Set flag to print updates
 stdout = True
@@ -22,16 +24,16 @@ stdout = True
 ## Test case type
 test_case_type = 'public'
 
-if not os.path.exists(root):
-    print(f"{root} does not exist. Please point to the correct directory.")
+if not os.path.exists(root_dir):
+    print(f"{root_dir} does not exist. Please point to the correct directory.")
     exit()
 
-print(f"Reading from {root}")
+print(f"Reading from {root_dir}")
 
 skip_dirs = ['.DS_Store']
 stats = []
 
-for dir in os.listdir(root):
+for dir in os.listdir(root_dir):
     if dir in skip_dirs:
         continue
 
@@ -45,7 +47,7 @@ for dir in os.listdir(root):
         'Test_Case_Type': test_case_type
     }
 
-    prob_directory = os.path.join(root, dir)
+    prob_directory = os.path.join(root_dir, dir)
 
     if 'gpt_code.py' not in os.listdir(prob_directory):
         print(f"GPT code not in {prob_directory}. Moving to next.")
@@ -89,7 +91,7 @@ for dir in os.listdir(root):
                 inner_result['N_Failed'] += 1
     stats.append(inner_result)
 
-timestr = time.strftime("%Y%m%d_%H%M%S")
-file_name = os.path.join(root, 'results_' + timestr + '.csv')
+# timestr = time.strftime("%Y%m%d_%H%M%S")
+file_name = os.path.join(root_dir, 'results_' + folder_name + '.csv')
 
 _ = pd.DataFrame(stats).to_csv(file_name)
