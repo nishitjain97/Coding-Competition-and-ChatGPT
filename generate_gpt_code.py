@@ -26,6 +26,10 @@ with open(api_key_location, 'r') as f:
 ## Root location
 root_dir = "."
 
+## Input Folder
+## [Does not use root_dir. Give complete path]
+problems_path = "/Users/nishitjain/Documents/Nishit/Masters/AP/collect_data/source_4_codecontests/0000.parquet"
+
 ## Output Folder
 output_folder = "test"
 output_location = os.path.join(root_dir, output_folder)
@@ -50,7 +54,7 @@ os.mkdir(root)
 print(f"Storing results in {root}")
 
 ## Read problems to generate GPT codes
-problems = pd.read_parquet("/Users/nishitjain/Documents/Nishit/Masters/AP/collect_data/source_4_codecontests/0000.parquet")
+problems = pd.read_parquet(problems_path)
 
 ## Read prompt template
 with open(prompt_template_loc, 'r') as f:
