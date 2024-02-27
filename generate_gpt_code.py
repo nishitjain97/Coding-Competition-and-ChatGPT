@@ -13,6 +13,7 @@ from openai import OpenAI
 import time
 import json
 import ast
+import subprocess
 
 from utils import *
 
@@ -44,6 +45,11 @@ stdout = True
 ## Specify model
 model = 'gpt-3.5-turbo'
 
+## Flake8 Code categories
+## F - PyFlakes
+## B - BugBear
+keep_code_patterns = ["F", "B"]
+
 if not os.path.exists(output_location):
     print(f"{output_location} does not exist. Please create directory before running this file.")
     exit()
@@ -60,7 +66,7 @@ problems = pd.read_parquet(problems_path)
 with open(prompt_template_loc, 'r') as f:
     prompt_template = ''.join(f.readlines())
 
-for index in problems.index[:10]:
+for index in problems.index:
     problem = problems.loc[index]
 
     test_cases_public = problem['public_tests']
@@ -119,3 +125,16 @@ for index in problems.index[:10]:
     tree = ast.parse(code_blocks)
     with open(os.path.join(prob_directory, 'ast.txt'), 'w') as f:
         f.writelines(ast.dump(tree))
+
+    try:
+        command = "flake8 " + os.path.join(prob_directory, 'gpt_code.py') + " > " + os.path.join(prob_directory, "flake8_results.txt")
+        result = subprocess.run(command, shell=True, timeout=2)
+    except:
+        print("Unable to run flake8.")
+        continue
+
+    with open(os.path.join(prob_directory, "flake8_results.txt"), 'r') as f:
+        issues = [issue for issue in f.readlines() if issue.split(": ")[1][0] in keep_code_patterns]
+
+    with open(os.path.join(prob_directory, "flake8_results.txt"), 'w') as f:
+        f.writelines(''.join(issues))
