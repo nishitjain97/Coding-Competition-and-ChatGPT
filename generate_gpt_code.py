@@ -40,10 +40,13 @@ prompt_template_file = "prompt_template.txt"
 prompt_template_loc = os.path.join(root_dir, prompt_template_file)
 
 ## Set flag to print updates
-stdout = True
+stdout = False
 
 ## Specify model
 model = 'gpt-3.5-turbo'
+
+## Number of alternative generations
+n_gen = 2
 
 ## Flake8 Code categories
 ## F - PyFlakes
@@ -66,7 +69,7 @@ problems = pd.read_parquet(problems_path)
 with open(prompt_template_loc, 'r') as f:
     prompt_template = ''.join(f.readlines())
 
-for index in problems.index:
+for index in problems.index[:10]:
     problem = problems.loc[index]
 
     test_cases_public = problem['public_tests']
@@ -107,34 +110,38 @@ for index in problems.index:
     with open(os.path.join(prob_directory, 'prompt.txt'), 'w') as f:
         f.writelines(prompt)
 
-    full_response, code_blocks = ask_chatgpt(
+    responses = ask_chatgpt(
         client=client,
         prompt=prompt,
         model=model,
-        stdout=stdout
+        stdout=stdout,
+        n = n_gen,
+        temperature = 0.8
     )
 
-    with open(os.path.join(prob_directory, 'gpt_response.txt'), 'w') as f:
-        f.writelines(full_response)
+    for i in range(n_gen):
+        with open(os.path.join(prob_directory, 'gpt_response_' + str(i) + '.txt'), 'w') as f:
+            f.writelines(responses[i]['full_response'])
 
-    code_blocks = ''.join(code_blocks)
+        code_blocks = ''.join(responses[i]['code_blocks'])
 
-    with open(os.path.join(prob_directory, 'gpt_code.py'), 'w') as f:
-        f.writelines(code_blocks)
+        with open(os.path.join(prob_directory, 'gpt_code_' + str(i) + '.py'), 'w') as f:
+            f.writelines(code_blocks)
 
-    tree = ast.parse(code_blocks)
-    with open(os.path.join(prob_directory, 'ast.txt'), 'w') as f:
-        f.writelines(ast.dump(tree))
+        tree = ast.parse(code_blocks)
 
-    try:
-        command = "flake8 " + os.path.join(prob_directory, 'gpt_code.py') + " > " + os.path.join(prob_directory, "flake8_results.txt")
-        result = subprocess.run(command, shell=True, timeout=2)
-    except:
-        print("Unable to run flake8.")
-        continue
+        with open(os.path.join(prob_directory, 'ast_' + str(i) + '.txt'), 'w') as f:
+            f.writelines(ast.dump(tree))
 
-    with open(os.path.join(prob_directory, "flake8_results.txt"), 'r') as f:
-        issues = [issue for issue in f.readlines() if issue.split(": ")[1][0] in keep_code_patterns]
+        try:
+            command = "flake8 " + os.path.join(prob_directory, 'gpt_code_' + str(i) + '.py') + " > " + os.path.join(prob_directory, 'flake8_results_' + str(i) + '.txt')
+            result = subprocess.run(command, shell=True, timeout=2)
+        except:
+            print(f"Unable to run flake8 on response {i}")
+            continue
 
-    with open(os.path.join(prob_directory, "flake8_results.txt"), 'w') as f:
-        f.writelines(''.join(issues))
+        with open(os.path.join(prob_directory, "flake8_results_" + str(i) + ".txt"), 'r') as f:
+            issues = [issue for issue in f.readlines() if issue.split(": ")[1][0] in keep_code_patterns]
+
+        with open(os.path.join(prob_directory, "flake8_results_" + str(i) + ".txt"), 'w') as f:
+            f.writelines(''.join(issues))
