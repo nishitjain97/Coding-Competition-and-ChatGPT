@@ -2,6 +2,7 @@
 File with utilities.
 
 Nishit Jain, November 2023
+Nishit Jain, March 2024
 
 References:
     - Stanley Bak, March 2023
@@ -106,8 +107,9 @@ def ask_chatgpt(
         prompt: str,
         model: str,
         temperature: float = 0,
-        stdout: bool = True
-)->'tuple(str, list)':
+        stdout: bool = True,
+        n: int = 1
+)->'dict':
     """
         Function to send prompt to ChatGPT.
 
@@ -117,20 +119,22 @@ def ask_chatgpt(
             - model (str): Model name
             - temperature (float): To control randomness
             - stdout (bool): To print to standard output
+            - n (int): Number of alternative responses to the prompt
 
         Returns:
-            tuple(string, list) Full response and list of code blocks.
+            dict: Full response and code blocks for each of n alternative responses
     """
     if stdout:
         print(f"Asking ChatGPT prompt:\n{prompt}")
 
     try:
-        full_reply, code_block_list = ask_chatgpt_streaming(
+        responses = ask_chatgpt_streaming(
             client=client,
             prompt=prompt,
             model=model,
             temperature=temperature,
-            stdout=stdout
+            stdout=stdout,
+            n = n
         )
     except(
         requests.exceptions.ChunkedEncodingError,
@@ -139,7 +143,7 @@ def ask_chatgpt(
     ) as e:
         print(f"Error during ChatGPT generation: {e}")
 
-    return full_reply, code_block_list
+    return responses
 
 
 ###
@@ -150,8 +154,9 @@ def ask_chatgpt_streaming(
         prompt: str,
         model: str,
         temperature: float = 0,
-        stdout: bool = True
-)->'tuple(str, str)':
+        stdout: bool = True,
+        n: int = 1
+)->'dict':
     """
         Function to query chatgpt with prompt and get the full response and code blocks.
 
@@ -161,9 +166,10 @@ def ask_chatgpt_streaming(
             - model (str): String with model name
             - temperature (float): To control randomness. 0 means no randomness (consistency in responses)
             - stdout (bool): Print messages on standard output
+            - n (int): Number of alternative responses to the prompt
 
         Returns:
-            tuple(str, list) Full response and code blocks.
+            dict: Full response and code blocks for each of n alternative responses
     """
     system_message = {
         "role": "system",
@@ -194,72 +200,100 @@ def ask_chatgpt_streaming(
         messages=messages,
         temperature=temperature,
         max_tokens=max_response_tokens,
-        stream=True
+        stream=True,
+        n=n
     )
+    
+    # Keep track of the n different streaming responses
+    responses = {}
+    for i in range(n):
+        responses[i] = {'chunks': []}
 
-    finish_reason = None
-    cur_content = ""
-    started = False
-    full_response = ""
+    for chunk in response_iterator:
+        responses[chunk.choices[0].index]['chunks'].append(chunk)
 
-    code_blocks = []
-    cur_code_block = ""
+    def parse_response(chunks: list) -> tuple:
+        """
+            Function to parse chunks and return tuple with complete response and code blocks.
 
-    for i, chunk in enumerate(response_iterator):
-        finish_reason = chunk.choices[0].finish_reason
-        content = chunk.choices[0].delta.content
+            Arguments:
+                - chunks (list): List of chunks from GPT API
 
-        if content is not None:
-            cur_content += content
-            full_response += content
+            Returns:
+                (tuple): A two-tuple of complete response and code blocks.
+        """
+        finish_reason = None
+        cur_content = ""
+        started = False
+        full_response = ""
 
-            if not started:
-                if stdout:
-                    print(content, end="", flush=True)
+        code_blocks = []
+        cur_code_block = ""
 
-                code_prefixes = [
-                    "```python\n",
-                    "```\n",
-                    "'''\n"
-                ]
+        for chunk in chunks:
+            finish_reason = chunk.choices[0].finish_reason
+            content = chunk.choices[0].delta.content
 
-                for code_prefix in code_prefixes:
-                    index = cur_content.find(code_prefix)
+            if content is not None:
+                cur_content += content
+                full_response += content
 
-                    if index != -1:
-                        break
-
-                if index != -1:
-                    cur_content = cur_content[index + len(code_prefix):]
-                    started = True
-                    cur_code_block += cur_content
-                    cur_content = ""
-            else:
-                code_suffixes = [
-                    "```",
-                    "'''"
-                ]
-
-                for code_suffix in code_suffixes:
-                    index = cur_content.find(code_suffix)
-
-                    if index != -1:
-                        break
-                
-                if index != -1:
-                    started = False
-                    cur_content = cur_content[:index]
-
-                last_char_is_backtick = cur_content.rfind("`") == len(cur_content) - 1 or cur_content.rfind("'") == len(cur_content) - 1
-
-                if not last_char_is_backtick:
-                    cur_code_block += cur_content
-                    cur_content = ""
-                
                 if not started:
-                    code_blocks.append(cur_code_block)
-                    cur_code_block = ""
+                    if stdout:
+                        print(content, end="", flush=True)
 
-    assert finish_reason == "stop", f"Finish reason was not 'stop': {finish_reason}"
+                    code_prefixes = [
+                        "```python\n",
+                        "```\n",
+                        "'''\n"
+                    ]
 
-    return full_response, code_blocks
+                    for code_prefix in code_prefixes:
+                        index = cur_content.find(code_prefix)
+
+                        if index != -1:
+                            break
+
+                    if index != -1:
+                        cur_content = cur_content[index + len(code_prefix):]
+                        started = True
+                        cur_code_block += cur_content
+                        cur_content = ""
+                else:
+                    code_suffixes = [
+                        "```",
+                        "'''"
+                    ]
+
+                    for code_suffix in code_suffixes:
+                        index = cur_content.find(code_suffix)
+
+                        if index != -1:
+                            break
+                    
+                    if index != -1:
+                        started = False
+                        cur_content = cur_content[:index]
+
+                    last_char_is_backtick = cur_content.rfind("`") == len(cur_content) - 1 or cur_content.rfind("'") == len(cur_content) - 1
+
+                    if not last_char_is_backtick:
+                        cur_code_block += cur_content
+                        cur_content = ""
+                    
+                    if not started:
+                        code_blocks.append(cur_code_block)
+                        cur_code_block = ""
+
+        if finish_reason != "stop":
+            print(f"Finish reason was not 'stop': {finish_reason}")
+
+        return full_response, code_blocks
+    
+    for i in range(n):
+        full_response, code_blocks = parse_response(responses[i]['chunks'])
+        responses[i]['full_response'] = full_response
+        responses[i]['code_blocks'] = code_blocks
+        responses[i]['chunks'] = None
+
+    return responses
