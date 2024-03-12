@@ -4,9 +4,11 @@
 # dataset_root (str): Root directory for datasets (default: ./dataset)
 # verbose (bool): Verbosity (default: False)
 # batch_size (int): Size for writing to local file (default: 32)
-##
-dataset = {
-    'dataset_names': ['deepmind/code_contests', 'codeparrot/apps'],
+# n_samples (int): Number of data samples from each dataset
+###
+dataset_config = {
+    'dataset_names': ['deepmind/code_contests',
+                       'codeparrot/apps'],
     'dataset_root': './dataset',
     'verbose': True,
     'batch_size': 9,

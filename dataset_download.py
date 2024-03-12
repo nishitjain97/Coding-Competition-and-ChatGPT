@@ -6,13 +6,13 @@ import json
 
 # Configurations defined in config.py
 print("Gathering configs...")
-import config as cfg
-datasets = cfg.dataset.get('dataset_names', [])
-dataset_root = cfg.dataset.get('dataset_root', './dataset')
-verbosity = cfg.dataset.get('verbose', False)
+from config import dataset_config as cfg
+datasets = cfg.get('dataset_names', [])
+dataset_root = cfg.get('dataset_root', './dataset')
+verbosity = cfg.get('verbose', False)
 print("Configs gathered.")
-batch_size = cfg.dataset.get('batch_size', 32)
-n_samples = cfg.dataset.get('n_samples', 100)
+batch_size = cfg.get('batch_size', 32)
+n_samples = cfg.get('n_samples', 100)
 
 # Utility Functions
 def download_code_contests(
