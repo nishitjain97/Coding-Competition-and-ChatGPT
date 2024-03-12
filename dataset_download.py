@@ -55,7 +55,7 @@ def download_code_contests(
                 print(i + 1, end=" ")
 
             output_data['input'].append(data['description'])
-            output_data['output'].append(data['solutions'])
+            output_data['output'].append(json.dumps(data['solutions']))
             output_data['tests'].append(json.dumps({
                 'public_tests': data['public_tests'],
                 'private_tests': {
@@ -123,10 +123,10 @@ def download_apps(
                 print(i + 1, end=" ")
 
             output_data['input'].append(data['question'])
-            output_data['output'].append({
+            output_data['output'].append(json.dumps({
                 'language': [3] * len(json.loads(data['solutions'])),
                 'solution': json.loads(data['solutions'])
-            })
+            }))
             tests = json.loads(data['input_output'])
             output_data['tests'].append(json.dumps({
                 'public_tests': {
