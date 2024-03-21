@@ -17,8 +17,7 @@ import tiktoken
 
 def create_prompt(
         description: dict,
-        prompt_template: str,
-        outfile: str=None
+        prompt_template: str
 )->str:
     """
         Function to create prompt using given template.
@@ -33,10 +32,6 @@ def create_prompt(
     """
     for key, value in description.items():
         prompt_template = prompt_template.replace(key, value)
-
-    if outfile is not None:
-        with open(outfile, 'w') as f:
-            f.writelines(prompt_template)
 
     return prompt_template
 
@@ -297,3 +292,66 @@ def ask_chatgpt_streaming(
         responses[i]['chunks'] = None
 
     return responses
+
+def extract_code(generated_text: str) -> list:
+    """
+        Function to parse generated text and return code blocks.
+
+        Arguments:
+            - generated_text (str): Text generated using LLM
+
+        Returns:
+            (list): A list of code blocks.
+    """
+    code_blocks = []
+
+    if generated_text is not None:
+        code_prefixes = [
+            "```python\n",
+            "```\n",
+            "'''\n"
+        ]
+
+        code_suffixes = [
+            "```",
+            "'''"
+        ]
+        
+        cur_content = generated_text
+        started = False
+
+        while True:
+            for item in code_prefixes + code_suffixes:
+                index = cur_content.find(item)
+
+                if index != -1:
+                    break
+            
+            if index == -1:
+                break
+            
+            if not started:
+                for code_prefix in code_prefixes:
+                    index = cur_content.find(code_prefix)
+
+                    if index != -1:
+                        break
+            
+                if index != -1:
+                    cur_content = cur_content[index + len(code_prefix):]
+                    started = True
+                else:
+                    break
+            else:
+                for code_suffix in code_suffixes:
+                    index = cur_content.find(code_suffix)
+
+                    if index != -1:
+                        break
+                
+                if index != -1:
+                    code_blocks.append(cur_content[:index])
+                    started = False
+                    cur_content = cur_content[index + len(code_suffix):]
+
+    return code_blocks

@@ -1,7 +1,15 @@
 # External Libraries
 import pandas as pd
 import os
+
+# For GPT
 from openai import OpenAI
+
+# For code llama
+from transformers import AutoTokenizer
+import transformers
+import torch
+
 from utils import *
 
 # Configurations defined in config.py
@@ -57,7 +65,7 @@ def generate_gpt_code(
 
     os.makedirs(file_location, exist_ok=True)
     
-    with open(os.path.join(template_location, 'prompt_template.txt'), 'r') as f:
+    with open(os.path.join(template_location, 'prompt_template_gpt.txt'), 'r') as f:
         prompt_template = ''.join(f.readlines())
 
     if verbosity:
@@ -113,11 +121,86 @@ def generate_gpt_code(
             
     pd.DataFrame(output_data).to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
     
-
 def generate_code_llama_code(
-        model_name: str
+        model_name: str,
+        dataset_name: str,
+        dataset_generator: 'generator'
 ) -> None:
-    pass
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    pipeline = transformers.pipeline(
+        task="text-generation",
+        model=model_name,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+
+    file_location = os.path.join(output_root, 'results_first_iteration')
+    file_path = os.path.join(file_location, f"{dataset_name.replace('/', '-')}_{model_name.replace('/', '-')}.csv")
+
+    if os.path.exists(file_path):
+        print(file_path, "exists. Replacing.")
+        os.remove(file_path)
+
+    os.makedirs(file_location, exist_ok=True)
+    
+    with open(os.path.join(template_location, 'prompt_template_llama.txt'), 'r') as f:
+        prompt_template = ''.join(f.readlines())
+
+    if verbosity:
+        print("Read prompt template.")
+        print("Sample: ", end="")
+
+    output_data = {
+        'index': [],
+        'predict': [],
+        'actual': [],
+        'tests': []
+    }
+
+    for i in range(n_samples):
+        if verbosity:
+            print(i + 1, end=" ")
+
+        sample = next(dataset_generator)
+
+        problem = sample['input']
+
+        prompt = create_prompt(
+            description={
+                '%{prompt}%': problem
+            },
+            prompt_template=prompt_template
+        )
+        
+        sequences = pipeline(
+            prompt,
+            do_sample=True,
+            temperature=temperature,
+            num_return_sequences=k,
+            eos_token_id=tokenizer.eos_token_id
+        )
+
+        for j in range(k):
+            generated_text = sequences[j]['generated_text']
+            code_blocks = ''.join(extract_code(generated_text))
+
+            output_data['index'].append(i)
+            output_data['predict'].append(code_blocks)
+            output_data['actual'].append(sample['output'])
+            output_data['tests'].append(sample['tests'])
+
+        if (i + 1) % batch_size == 0:
+            pd.DataFrame(output_data).to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
+            
+            output_data = {
+                'index': [],
+                'predict': [],
+                'actual': [],
+                'tests': []
+            }
+            
+    pd.DataFrame(output_data).to_csv(file_path, mode='a', index=False, header=not os.path.exists(file_path))
 
 if __name__ == '__main__':
     for dataset_name in dataset_names:
@@ -137,6 +220,13 @@ if __name__ == '__main__':
         
         if model_name in ['gpt-3.5-turbo', 'gpt-4']:
             generate_gpt_code(
+                model_name=model_name,
+                dataset_name=dataset_name,
+                dataset_generator=dataset_generator
+            )
+        
+        elif model_name in ['codellama/CodeLlama-7b-Instruct-hf']:
+            generate_code_llama_code(
                 model_name=model_name,
                 dataset_name=dataset_name,
                 dataset_generator=dataset_generator
