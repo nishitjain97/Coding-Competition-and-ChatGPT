@@ -98,3 +98,6 @@ if __name__ == "__main__":
                     issues = ''.join(issues)
 
                 dataset.loc[index, 'flake8'] = issues
+
+            ast = generate_tree(llm_code)
+            dataset.loc[index, 'ast'] = ast

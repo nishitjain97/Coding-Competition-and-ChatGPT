@@ -355,3 +355,44 @@ def extract_code(generated_text: str) -> list:
                     cur_content = cur_content[index + len(code_suffix):]
 
     return code_blocks
+
+###
+# abstract syntax tree
+###
+def generate_tree(code) -> str:
+    """
+        Function to return abstract syntax tree of given code.
+    """
+    # Run git clone https://github.com/tree-sitter/tree-sitter-python in current directory first
+    from tree_sitter import Language, Parser
+    Language.build_library(
+        # Store the library in the `build` directory
+        "build/my-languages.so",
+        # Include one or more languages
+        ["tree-sitter-python"],
+    )
+
+    # Get language grammar
+    py_lang = Language("build/my-languages.so", "python")
+
+    # Create parser
+    parser = Parser()
+    parser.set_language(py_lang)
+
+    tree = parser.parse(bytes(code, "utf-8"))
+
+    def traverse(node, depth = 0) -> str:
+        """
+            Traverse the syntax tree to serialize it.
+        """
+        if node.type == "ERROR":
+            return ''
+        
+        output = ""
+
+        for child in node.children:
+            output += traverse(child, depth + 1)
+
+        return '\n' + '  ' * depth + f'{node.type} [{node.start_point}:{node.end_point}]' + output
+    
+    return traverse(tree.root_node).strip()
