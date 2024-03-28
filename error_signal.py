@@ -71,3 +71,10 @@ if __name__ == "__main__":
 
             # Compiler Error
             dataset.loc[index, 'compiler_error'] = result.stderr
+
+            # Variable Trace
+            # has_error, traceback string, dynamic trace string
+            has_error, tb_string, _ = trace_main("code_tmp")
+            # Keep last 2000 characters of traceback
+            tb_string = tb_string[-2000:]
+            dataset.loc[index, 'variable_trace'] = tb_string
