@@ -4,3 +4,8 @@ dataset/
 .ipynb_checkpoints/
 __pycache__/
 results_first_iteration/
+build/
+code_tmp.py
+flake8_tmp.txt
+tree-sitter-python
+inp_tmp.txt
