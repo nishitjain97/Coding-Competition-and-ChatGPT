@@ -68,3 +68,6 @@ if __name__ == "__main__":
             elif timeout_flag:
                 dataset.loc[index, 'timeout_flag'] = timeout_flag
                 continue
+
+            # Compiler Error
+            dataset.loc[index, 'compiler_error'] = result.stderr
