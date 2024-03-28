@@ -40,3 +40,14 @@ code_gen_config = {
     'api_key_location': '/Users/nishitjain/Documents/Nishit/Masters/AP/gpt_api_key.txt',
     'template_location': '.'
 }
+
+### Signal Generation: For error_signal.py
+#
+###
+signal_gen_config = {
+    'model_name': "gpt-3.5-turbo",
+    'output_root': '.',
+    'dataset_names': ['codeparrot/apps'],
+    'dataset_root': './dataset',
+    'verbose': False
+}
