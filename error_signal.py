@@ -78,3 +78,23 @@ if __name__ == "__main__":
             # Keep last 2000 characters of traceback
             tb_string = tb_string[-2000:]
             dataset.loc[index, 'variable_trace'] = tb_string
+
+            # Flake8 signal
+            ## F - PyFlakes
+            ## B - BugBear
+            keep_code_patterns = ("F", "B", "E9")
+            flake8_flag = True
+
+            try:
+                command = "flake8 code_tmp.py > flake8_tmp.txt"
+                result = subprocess.run(command, shell=True, timeout=2)
+            except:
+                print(f"Unable to run flake8 on response")
+                flake8_flag = False
+
+            if flake8_flag:
+                with open("flake8_tmp.txt", 'r') as f:
+                    issues = [issue for issue in f.readlines() if issue.split(": ")[1].startswith(keep_code_patterns)]
+                    issues = ''.join(issues)
+
+                dataset.loc[index, 'flake8'] = issues
